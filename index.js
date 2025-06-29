@@ -21,8 +21,24 @@ app.get('/properties', async (req, res) => {
         'accept': 'application/json'
       }
     });
-    const data = await response.json();
-    res.json(data);
+
+    // Falls Fehlerstatus (z. B. 401, 429 etc.)
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Lodgify API-Fehler: ${response.status} - ${errorText}`);
+      return res.status(response.status).json({ error: 'Fehler von Lodgify', details: errorText });
+    }
+
+    const text = await response.text();
+
+    try {
+      const data = JSON.parse(text); // Nur wenn JSON gültig
+      res.json(data);
+    } catch (parseError) {
+      console.error("❌ Antwort ist kein gültiges JSON:", text);
+      res.status(502).json({ error: "Ungültige Antwort von Lodgify", raw: text });
+    }
+
   } catch (error) {
     console.error('❌ Fehler bei Anfrage an Lodgify:', error);
     res.status(500).json({ error: 'Proxy Fehler' });
